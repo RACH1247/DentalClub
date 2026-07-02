@@ -1,6 +1,7 @@
 import { useState, useCallback, useMemo, useEffect } from 'react';
 
 import { useRole } from '../../context/RoleContext';
+import { getPatientById } from '../../services/patientService';
 
 import { Activity, Droplets, TrendingDown, RotateCcw, Info } from 'lucide-react';
 /**
@@ -39,14 +40,10 @@ function getDefaultPerioData(patientId) {
   } else if (patientId === 'DC-2003') {
     // Priya Patel: normal gum measurements
     data[32] = { pocketDepth: [5, 3, 3], bop: [1, 0, 0], recession: 0 };
-  } else {
-    // Fallback defaults
-    data[3]  = { pocketDepth: [4, 5, 3], bop: [2, 1, 0], recession: 2 };
-    data[14] = { pocketDepth: [6, 4, 5], bop: [3, 0, 2], recession: 3 };
-    data[16] = { pocketDepth: [3, 4, 3], bop: [0, 1, 0], recession: 1 };
-    data[19] = { pocketDepth: [5, 6, 7], bop: [2, 3, 2], recession: 4 };
-    data[30] = { pocketDepth: [4, 3, 4], bop: [1, 0, 0], recession: 1 };
   }
+  // For any other patient (newly added), all teeth retain the clean
+  // baseline set above. Perio data only changes when a dentist
+  // explicitly records measurements for this patient.
   return data;
 
 }
@@ -55,8 +52,11 @@ function getInitialPerioData(patientId) {
     const stored = localStorage.getItem(`dc_perioData_${patientId}`);
     if (stored) return JSON.parse(stored);
   } catch { /* fallthrough */ }
+  try {
+    const patient = getPatientById(patientId);
+    if (patient && patient.perioChart) return patient.perioChart;
+  } catch { /* fallthrough */ }
   return getDefaultPerioData(patientId);
-
 }
 function getPocketColor(depth) {
   if (depth <= 3) return 'text-emerald-600 bg-emerald-50 border-emerald-200';

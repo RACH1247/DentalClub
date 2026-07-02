@@ -1,8 +1,10 @@
+import { useState, useEffect } from 'react';
 import {
   Users, Search, ChevronRight, Calendar, Phone, Mail,
-  AlertCircle, ArrowLeft, X,
+  AlertCircle, ArrowLeft, X, Trash2,
 } from 'lucide-react';
-import { useRole, PATIENT_DIRECTORY } from '../../context/RoleContext';
+import { useRole, getPatientDirectory } from '../../context/RoleContext';
+import { removePatientFromStorage } from '../../services/patientService';
 
 /**
  * PatientDirectory — Dentist-facing patient selection panel.
@@ -22,6 +24,20 @@ import { useRole, PATIENT_DIRECTORY } from '../../context/RoleContext';
 
 export default function PatientDirectory() {
   const { activePatient, selectPatient, clearPatient } = useRole();
+  const [patients, setPatients] = useState(() => getPatientDirectory());
+
+  // Sync directory list on mount
+  useEffect(() => {
+    setPatients(getPatientDirectory());
+  }, []);
+
+  const handleRemove = (patientId) => {
+    const updated = removePatientFromStorage(patientId);
+    setPatients(updated);
+    if (activePatient?.id === patientId) {
+      clearPatient();
+    }
+  };
 
   // If a patient is already selected, show the "return to directory" state
   if (activePatient) {
@@ -75,60 +91,91 @@ export default function PatientDirectory() {
           </p>
         </div>
         <span className="badge badge-blue">
-          {PATIENT_DIRECTORY.length} Patients
+          {patients.length} Patients
         </span>
       </div>
 
       {/* ── Patient Cards ───────────────────── */}
       <div className="grid gap-3">
-        {PATIENT_DIRECTORY.map((patient) => (
-          <button
+        {patients.map((patient) => (
+          <div
             key={patient.id}
-            onClick={() => selectPatient(patient.id)}
-            id={`patient-select-${patient.id}`}
+            id={`patient-card-${patient.id}`}
             className="w-full group flex items-center gap-4 px-5 py-4 rounded-xl
                        border border-slate-100 bg-white text-left
                        hover:border-dental-300 hover:shadow-card-hover hover:bg-dental-50/30
-                       active:scale-[0.99] transition-all duration-200"
+                       transition-all duration-200"
           >
-            {/* Avatar */}
-            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-dental-400 to-dental-600
-                            flex items-center justify-center text-white text-sm font-bold shadow-sm
-                            group-hover:shadow-glow-blue transition-shadow">
-              {patient.initials}
+            {/* Clickable Area for Selection */}
+            <div 
+              onClick={() => selectPatient(patient.id)}
+              className="flex-1 flex items-center gap-4 cursor-pointer min-w-0"
+              title={`Select ${patient.name}`}
+            >
+              {/* Avatar */}
+              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-dental-400 to-dental-600
+                              flex items-center justify-center text-white text-sm font-bold shadow-sm
+                              group-hover:shadow-glow-blue transition-shadow">
+                {patient.initials}
+              </div>
+
+              {/* Info */}
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 mb-0.5">
+                  <h3 className="text-sm font-bold text-slate-800 group-hover:text-dental-600 transition-colors">
+                    {patient.name}
+                  </h3>
+                  <span className="text-[10px] text-slate-400 font-mono">{patient.id}</span>
+                  {patient.rollNo && (
+                    <span className="badge badge-blue text-[9px] px-1.5 py-0">
+                      {patient.rollNo}
+                    </span>
+                  )}
+                </div>
+                <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-500">
+                  <span>Age: {patient.age}</span>
+                  <span className="flex items-center gap-1">
+                    <Calendar className="w-3 h-3 text-slate-400" />
+                    Last Visit: {patient.lastVisit}
+                  </span>
+                  {patient.concerns && (
+                    <span className="badge badge-amber text-[9px] px-1.5 py-0">
+                      {patient.concerns}
+                    </span>
+                  )}
+                </div>
+              </div>
             </div>
 
-            {/* Info */}
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 mb-0.5">
-                <h3 className="text-sm font-bold text-slate-800 group-hover:text-dental-600 transition-colors">
-                  {patient.name}
-                </h3>
-                <span className="text-[10px] text-slate-400 font-mono">{patient.id}</span>
-                {patient.rollNo && (
-                  <span className="badge badge-blue text-[9px] px-1.5 py-0">
-                    {patient.rollNo}
-                  </span>
-                )}
-              </div>
-              <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-500">
-                <span>Age: {patient.age}</span>
-                <span className="flex items-center gap-1">
-                  <Calendar className="w-3 h-3 text-slate-400" />
-                  Last Visit: {patient.lastVisit}
-                </span>
-                {patient.concerns && (
-                  <span className="badge badge-amber text-[9px] px-1.5 py-0">
-                    {patient.concerns}
-                  </span>
-                )}
+            {/* Actions/Controls */}
+            <div className="flex items-center gap-2 shrink-0">
+              {/* Remove button (non-seed only) */}
+              {!['DC-2001', 'DC-2002', 'DC-2003'].includes(patient.id) && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleRemove(patient.id);
+                  }}
+                  className="p-2 rounded-lg text-slate-300 hover:text-red-500 hover:bg-red-50
+                             transition-all duration-150 active:scale-90"
+                  title={`Remove ${patient.name}`}
+                  id={`action-remove-dir-${patient.id}`}
+                >
+                  <Trash2 className="w-4.5 h-4.5" />
+                </button>
+              )}
+
+              {/* Chevron Arrow */}
+              <div 
+                onClick={() => selectPatient(patient.id)}
+                className="cursor-pointer p-1"
+                title={`Select ${patient.name}`}
+              >
+                <ChevronRight className="w-5 h-5 text-slate-300 group-hover:text-dental-500
+                                         group-hover:translate-x-1 transition-all shrink-0" />
               </div>
             </div>
-
-            {/* Arrow */}
-            <ChevronRight className="w-5 h-5 text-slate-300 group-hover:text-dental-500
-                                     group-hover:translate-x-1 transition-all shrink-0" />
-          </button>
+          </div>
         ))}
       </div>
 

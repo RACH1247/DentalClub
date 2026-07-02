@@ -1,6 +1,11 @@
 import { useState, useEffect } from 'react';
 import { useRole } from '../../context/RoleContext';
 import {
+  fetchPatientsFromStorage,
+  savePatientsToStorage,
+  updatePatientInStorage,
+} from '../../services/patientService';
+import {
   Users,
   Search,
   ChevronDown,
@@ -16,102 +21,40 @@ import {
 
 /**
  * PatientRecord — Patient profile table with expandable detail cards.
- * Persistent in localStorage. Configured with backend API connectors.
+ *
+ * Now reads from the shared patientService (localStorage-backed),
+ * ensuring data stays in sync with PatientsView and AddPatientForm.
  *
  * ┌─────────────────────────────────────────────┐
  * │  BACKEND: GET /api/patients/:id/records     │
- * │  Replace local storage loading with API      │
- * │  fetch call to load clinical details for    │
- * │  the active patient.                        │
+ * │  The patientService functions are drop-in   │
+ * │  replaceable with Axios calls. No changes   │
+ * │  needed in this file.                       │
  * └─────────────────────────────────────────────┘
  */
 
-const INITIAL_PATIENTS = [
-  {
-    id: 'DC-2001',
-    name: 'Rajivkumar',
-    age: 20,
-    gender: 'Male',
-    phone: '+91 98765-00001',
-    email: 'rajivkumar@email.com',
-    lastVisit: '2026-05-12',
-    nextAppointment: '2026-07-15',
-    concerns: 'Routine check-up',
-    allergies: [],
-    treatments: [
-      { date: '2026-05-12', procedure: 'Consultation & Cleaning', dentist: 'Dr. Mehra', status: 'Completed' },
-      { date: '2026-01-15', procedure: 'Dental Filling — Tooth #14', dentist: 'Dr. Mehra', status: 'Completed' },
-    ],
-    insuranceProvider: 'Student Health Scheme',
-    bloodGroup: 'A+',
-    rollNo: '24202C0059',
-  },
-  {
-    id: 'DC-2002',
-    name: 'Aarav Sharma',
-    age: 42,
-    gender: 'Male',
-    phone: '+91 87654-00002',
-    email: 'aarav.sharma@email.com',
-    lastVisit: '2026-06-01',
-    nextAppointment: '2026-07-20',
-    concerns: 'Crown replacement follow-up',
-    allergies: ['Penicillin'],
-    treatments: [
-      { date: '2026-06-01', procedure: 'Crown Assessment — Tooth #3', dentist: 'Dr. Mehra', status: 'Completed' },
-      { date: '2026-04-10', procedure: 'Crown Preparation — Tooth #3', dentist: 'Dr. Mehra', status: 'Completed' },
-    ],
-    insuranceProvider: 'Star Health Insurance',
-    bloodGroup: 'B+',
-    rollNo: null,
-  },
-  {
-    id: 'DC-2003',
-    name: 'Priya Patel',
-    age: 29,
-    gender: 'Female',
-    phone: '+91 76543-00003',
-    email: 'priya.patel@email.com',
-    lastVisit: '2026-06-18',
-    nextAppointment: '2026-06-28',
-    concerns: 'Wisdom tooth extraction',
-    allergies: [],
-    treatments: [
-      { date: '2026-06-18', procedure: 'Pre-surgical Consultation Assessment', dentist: 'Dr. Mehra', status: 'Completed' },
-    ],
-    insuranceProvider: 'HDFC ERGO Health',
-    bloodGroup: 'O+',
-    rollNo: null,
-  },
-];
-
-function getInitialPatients() {
-  try {
-    const stored = localStorage.getItem('dc_patients');
-    if (stored) return JSON.parse(stored);
-  } catch { /* ignore */ }
-  return INITIAL_PATIENTS;
-}
-
 function formatDate(dateStr) {
-  return new Date(dateStr).toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-  });
+  if (!dateStr) return '—';
+  try {
+    return new Date(dateStr).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+    });
+  } catch {
+    return dateStr;
+  }
 }
 
 export default function PatientRecord({ compact = false, patientId = null }) {
   const { userRole } = useRole();
-  const [patients, setPatients] = useState(getInitialPatients);
+  const [patients, setPatients] = useState(() => fetchPatientsFromStorage());
   const [expandedId, setExpandedId] = useState(patientId || null);
   const [searchQuery, setSearchQuery] = useState('');
 
-  // Persist patients array
+  // Persist patients array via shared service
   useEffect(() => {
-    try {
-      localStorage.setItem('dc_patients', JSON.stringify(patients));
-    } catch { /* ignore */ }
+    savePatientsToStorage(patients);
   }, [patients]);
 
   // Expand selected patient by default when parent updates prop

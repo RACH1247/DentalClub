@@ -165,7 +165,7 @@ export default function Tooth({ toothNumber, location, status = 'Healthy', onSta
   }
 
   return (
-    <div className="tooth-container flex flex-col items-center" ref={popoverRef}>
+    <div className={`tooth-container flex flex-col items-center ${showPopover ? 'z-[100]' : ''}`} ref={popoverRef}>
       {/* Tooth Number Label (top for upper, bottom for lower) */}
       {location === 'Upper' && (
         <span className={`text-[10px] font-bold mb-1 ${config.text}`}>
@@ -208,7 +208,7 @@ export default function Tooth({ toothNumber, location, status = 'Healthy', onSta
 
       {/* ── Status Popover ──────────────────── */}
       {showPopover && !readOnly && (
-        <div className={`popover ${location === 'Upper' ? 'top-full mt-2' : 'bottom-full mb-2'} left-1/2 -translate-x-1/2`}>
+        <div className={`absolute z-[100] popover ${location === 'Upper' ? 'top-full mt-2' : 'bottom-full mb-2'} left-1/2 -translate-x-1/2`}>
           <p className="px-3 py-1.5 text-[10px] font-semibold text-slate-400 uppercase tracking-wider">
             Set Status
           </p>

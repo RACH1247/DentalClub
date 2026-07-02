@@ -3,6 +3,7 @@ import { ClipboardList, Trash2, Clock, ArrowDown } from 'lucide-react';
 import Tooth from './Tooth';
 import ToothDetailPanel from './ToothDetailPanel';
 import { useRole } from '../../context/RoleContext';
+import { getPatientById } from '../../services/patientService';
 
 /**
  * ChartingGrid — Complete 32-tooth adult dental map with Clinical Audit Log.
@@ -29,6 +30,11 @@ function getInitialTeethStatus(patientId) {
     if (stored) return JSON.parse(stored);
   } catch { /* fallthrough */ }
 
+  try {
+    const patient = getPatientById(patientId);
+    if (patient && patient.teethState) return patient.teethState;
+  } catch { /* fallthrough */ }
+
   const status = {};
   for (let i = 1; i <= 32; i++) {
     status[i] = 'Healthy';
@@ -41,13 +47,10 @@ function getInitialTeethStatus(patientId) {
     status[19] = 'Missing';
   } else if (patientId === 'DC-2003') {
     status[32] = 'Cavity'; // Wisdom tooth
-  } else {
-    status[3]  = 'Treated';
-    status[14] = 'Cavity';
-    status[16] = 'Treated';
-    status[19] = 'Missing';
-    status[30] = 'Treated';
   }
+  // For any other patient (newly added), all 32 teeth stay "Healthy".
+  // Charting data only changes when a dentist explicitly interacts
+  // with this patient's profile in the ChartingGrid.
   return status;
 }
 

@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { Send, Lock, Smile, Paperclip, MoreVertical, Users, MessageSquare } from 'lucide-react';
-import { useRole, PATIENT_DIRECTORY } from '../../context/RoleContext';
+import { useRole, getPatientDirectory } from '../../context/RoleContext';
 
 /**
  * ChatBox — Role-aware secure messaging component.
@@ -58,9 +58,10 @@ function loadThreads() {
 
 export default function ChatBox({ embedded = false, overrideContact = null }) {
   const { currentUser, userRole } = useRole();
+  const patientDirectory = getPatientDirectory();
   const [threads, setThreads] = useState(loadThreads);
   const [activeContactId, setActiveContactId] = useState(
-    userRole === 'patient' ? 'DC-2001' : (PATIENT_DIRECTORY[0]?.id || 'DC-2001')
+    userRole === 'patient' ? 'DC-2001' : (patientDirectory[0]?.id || 'DC-2001')
   );
   const [inputValue, setInputValue] = useState('');
   const [isTyping, setIsTyping] = useState(false);
@@ -98,7 +99,7 @@ export default function ChatBox({ embedded = false, overrideContact = null }) {
     ? overrideContact
     : userRole === 'patient'
       ? { id: 'doctor', name: 'Dr. Anita Mehra', initials: 'AM', status: 'online', role: 'Secure Portal Help Desk' }
-      : PATIENT_DIRECTORY.find(p => p.id === activeContactId) || PATIENT_DIRECTORY[0];
+      : patientDirectory.find(p => p.id === activeContactId) || patientDirectory[0];
 
   const handleSend = useCallback(() => {
     if (!inputValue.trim()) return;
@@ -194,7 +195,7 @@ export default function ChatBox({ embedded = false, overrideContact = null }) {
           ) : (
             /* Dentist: Active patient contact list — fully interactive */
             <div className="space-y-1">
-              {PATIENT_DIRECTORY.map((patient) => {
+              {patientDirectory.map((patient) => {
                 const isActive = activeContactId === patient.id;
                 const threadMsgs = threads[patient.id] || [];
                 const lastMsg = threadMsgs[threadMsgs.length - 1];

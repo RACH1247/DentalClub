@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useCallback, useEffect } from 'react';
+import { fetchPatientsFromStorage } from '../services/patientService';
 
 const AppContext = createContext(null);
 
@@ -24,54 +25,24 @@ const AppContext = createContext(null);
  * └─────────────────────────────────────────────┘
  */
 
-/* ── Patient Directory Data ──────────────────── */
-export const PATIENT_DIRECTORY = [
-  {
-    id: 'DC-2001',
-    name: 'Rajivkumar',
-    age: 20,
-    rollNo: '24202C0059',
-    gender: 'Male',
-    phone: '+91 98765-00001',
-    email: 'rajivkumar@email.com',
-    lastVisit: '12-May-2026',
-    nextAppointment: '15-Jul-2026',
-    concerns: 'Routine check-up',
-    allergies: [],
-    bloodGroup: 'A+',
-    initials: 'RK',
-  },
-  {
-    id: 'DC-2002',
-    name: 'Aarav Sharma',
-    age: 42,
-    rollNo: null,
-    gender: 'Male',
-    phone: '+91 87654-00002',
-    email: 'aarav.sharma@email.com',
-    lastVisit: '01-Jun-2026',
-    nextAppointment: '20-Jul-2026',
-    concerns: 'Crown replacement follow-up',
-    allergies: ['Penicillin'],
-    bloodGroup: 'B+',
-    initials: 'AS',
-  },
-  {
-    id: 'DC-2003',
-    name: 'Priya Patel',
-    age: 29,
-    rollNo: null,
-    gender: 'Female',
-    phone: '+91 76543-00003',
-    email: 'priya.patel@email.com',
-    lastVisit: '18-Jun-2026',
-    nextAppointment: '28-Jun-2026',
-    concerns: 'Wisdom tooth extraction',
-    allergies: [],
-    bloodGroup: 'O+',
-    initials: 'PP',
-  },
-];
+/* ── Patient Directory Data ──────────────────────
+ * Now dynamically sourced from the shared patientService.
+ * This ensures patients added via the form are also
+ * visible in the charting flow's PatientDirectory selector.
+ *
+ * ┌──────────────────────────────────────────────────┐
+ * │  BACKEND SWAP:                                   │
+ * │  When patientService switches to Axios, this     │
+ * │  getter will automatically use the network data. │
+ * └──────────────────────────────────────────────────┘
+ */
+export function getPatientDirectory() {
+  return fetchPatientsFromStorage();
+}
+
+// Legacy export for backward compatibility — evaluates lazily
+// Components should prefer getPatientDirectory() for live data
+export const PATIENT_DIRECTORY = fetchPatientsFromStorage();
 
 function loadFromStorage(key, fallback) {
   try {
@@ -126,7 +97,8 @@ export function AppProvider({ children }) {
     setCurrentUser(user);
     // Auto-select patient if logging in as patient
     if (user.role === 'patient') {
-      const patientProfile = PATIENT_DIRECTORY.find(p => p.id === user.targetPatientId) || PATIENT_DIRECTORY[0];
+      const liveDir = fetchPatientsFromStorage();
+      const patientProfile = liveDir.find(p => p.id === user.targetPatientId) || liveDir[0];
       setActivePatient(patientProfile);
     } else {
       setActivePatient(null);
@@ -152,7 +124,9 @@ export function AppProvider({ children }) {
      * │  patient profile from database.           │
      * └───────────────────────────────────────────┘
      */
-    const patient = PATIENT_DIRECTORY.find(p => p.id === patientId);
+    // Use live data from patientService so newly added patients are selectable
+    const liveDirectory = fetchPatientsFromStorage();
+    const patient = liveDirectory.find(p => p.id === patientId);
     if (patient) {
       setActivePatient(patient);
       setCurrentUser(prev => prev ? { ...prev, targetPatientId: patientId } : prev);
